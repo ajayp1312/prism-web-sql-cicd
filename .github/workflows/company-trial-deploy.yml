@@ -1,7 +1,10 @@
 name: Deploy to Company Trial DB
 
 on:
-  workflow_dispatch:
+  push:
+    branches: [qa]
+    paths:
+      - 'sql/**.sql'
 
 jobs:
   deploy:
