@@ -1,0 +1,3 @@
+-- Prism-web baseline schema loaded manually from baseline_ddl.sql
+-- Future incremental changes go below this line
+-- test trigger check
