@@ -1,0 +1,38 @@
+name: Deploy to Company Trial DB
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Write SSH key to file
+        shell: powershell
+        run: |
+          $key = "${{ secrets.BASTION_SSH_KEY }}"
+          Set-Content -Path "$env:RUNNER_TEMP\bastion_key.pem" -Value $key
+          icacls "$env:RUNNER_TEMP\bastion_key.pem" /inheritance:r
+          icacls "$env:RUNNER_TEMP\bastion_key.pem" /grant:r "$($env:USERNAME):(R)"
+
+      - name: Open SSH tunnel in background
+        shell: powershell
+        run: |
+          Start-Process ssh -ArgumentList "-i", "$env:RUNNER_TEMP\bastion_key.pem", "-o", "StrictHostKeyChecking=no", "-L", "5433:${{ secrets.TRIAL_DB_HOST }}:5432", "ec2-user@${{ secrets.BASTION_IP }}", "-N" -WindowStyle Hidden
+          Start-Sleep -Seconds 10
+
+      - name: Run SQL file against trial database
+        shell: powershell
+        env:
+          PGPASSWORD: ${{ secrets.TRIAL_DB_PASSWORD }}
+        run: |
+          & "C:\Program Files\PostgreSQL\18\bin\psql.exe" -h localhost -p 5433 -U ${{ secrets.TRIAL_DB_USER }} -d ${{ secrets.TRIAL_DB_NAME }} -f sql/changes.sql
+
+      - name: Close SSH tunnel
+        shell: powershell
+        if: always()
+        run: |
+          Get-Process ssh -ErrorAction SilentlyContinue | Stop-Process -Force
