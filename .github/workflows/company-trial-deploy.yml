@@ -19,7 +19,8 @@ jobs:
           $key = "${{ secrets.BASTION_SSH_KEY }}"
           Set-Content -Path "$env:RUNNER_TEMP\bastion_key.pem" -Value $key
           icacls "$env:RUNNER_TEMP\bastion_key.pem" /inheritance:r
-          icacls "$env:RUNNER_TEMP\bastion_key.pem" /grant:r "$($env:USERNAME):(R)"
+          icacls "$env:RUNNER_TEMP\bastion_key.pem" /grant:r "SYSTEM:(R)"
+          icacls "$env:RUNNER_TEMP\bastion_key.pem" /grant:r "Administrators:(R)"
 
       - name: Open SSH tunnel in background
         shell: powershell
