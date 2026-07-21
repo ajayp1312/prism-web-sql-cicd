@@ -25,8 +25,26 @@ jobs:
       - name: Open SSH tunnel in background
         shell: powershell
         run: |
-          Start-Process ssh -ArgumentList "-i", "$env:RUNNER_TEMP\bastion_key.pem", "-o", "StrictHostKeyChecking=no", "-L", "5433:${{ secrets.TRIAL_DB_HOST }}:5432", "ec2-user@${{ secrets.BASTION_IP }}", "-N" -WindowStyle Hidden
+          $key = "$env:RUNNER_TEMP\bastion_key.pem"
+          icacls $key /inheritance:r
+          icacls $key /grant:r "SYSTEM:(R)"
+          icacls $key /grant:r "Administrators:(R)"
+          icacls $key
+
+          Start-Process ssh -ArgumentList "-i", $key, "-o", "StrictHostKeyChecking=no", "-L", "5433:${{ secrets.TRIAL_DB_HOST }}:5432", "ec2-user@${{ secrets.BASTION_IP }}", "-N", "-v" `
+            -RedirectStandardOutput "$env:RUNNER_TEMP\ssh_out.log" `
+            -RedirectStandardError "$env:RUNNER_TEMP\ssh_err.log" `
+            -WindowStyle Hidden
+
           Start-Sleep -Seconds 10
+
+          Write-Host "----- SSH stdout -----"
+          Get-Content "$env:RUNNER_TEMP\ssh_out.log" -ErrorAction SilentlyContinue
+          Write-Host "----- SSH stderr -----"
+          Get-Content "$env:RUNNER_TEMP\ssh_err.log" -ErrorAction SilentlyContinue
+
+          Write-Host "----- Checking if port 5433 is listening -----"
+          Test-NetConnection -ComputerName localhost -Port 5433
 
       - name: Run SQL file against trial database
         shell: powershell
