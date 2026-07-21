@@ -2,7 +2,7 @@ name: Deploy to Company Trial DB
 
 on:
   push:
-    branches: [qa]
+    branches: [qa,main]
     paths:
       - 'sql/**.sql'
 
