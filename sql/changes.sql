@@ -7,3 +7,8 @@
 -- test trigger check5
 -- test trigger check5
 -- test trigger check7
+CREATE TABLE IF NOT EXISTS test_automation (
+    id SERIAL PRIMARY KEY,
+    test_name VARCHAR(100),
+    created_at TIMESTAMP DEFAULT NOW()
+);
