@@ -5,3 +5,4 @@
 -- test trigger check3
 -- test trigger check4
 -- test trigger check5
+-- test trigger check5
