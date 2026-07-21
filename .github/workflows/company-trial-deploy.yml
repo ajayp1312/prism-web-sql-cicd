@@ -21,6 +21,8 @@ jobs:
           icacls "$env:RUNNER_TEMP\bastion_key.pem" /inheritance:r
           icacls "$env:RUNNER_TEMP\bastion_key.pem" /grant:r "SYSTEM:(R)"
           icacls "$env:RUNNER_TEMP\bastion_key.pem" /grant:r "Administrators:(R)"
+          icacls "$env:RUNNER_TEMP\bastion_key.pem" /grant:r "*S-1-5-20:(R)"
+          icacls "$env:RUNNER_TEMP\bastion_key.pem"
 
       - name: Open SSH tunnel in background
         shell: powershell
@@ -29,6 +31,7 @@ jobs:
           icacls $key /inheritance:r
           icacls $key /grant:r "SYSTEM:(R)"
           icacls $key /grant:r "Administrators:(R)"
+          icacls $key /grant:r "*S-1-5-20:(R)"
           icacls $key
 
           Start-Process ssh -ArgumentList "-i", $key, "-o", "StrictHostKeyChecking=no", "-L", "5433:${{ secrets.TRIAL_DB_HOST }}:5432", "ec2-user@${{ secrets.BASTION_IP }}", "-N", "-v" `
