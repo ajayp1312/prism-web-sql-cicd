@@ -24,8 +24,10 @@ jobs:
           icacls "$env:RUNNER_TEMP\bastion_key.pem" /grant:r "*S-1-5-20:(R)"
           icacls "$env:RUNNER_TEMP\bastion_key.pem"
 
-      - name: Open SSH tunnel in background
+      - name: Open tunnel and run SQL file (combined, same step)
         shell: powershell
+        env:
+          PGPASSWORD: ${{ secrets.TRIAL_DB_PASSWORD }}
         run: |
           $key = "$env:RUNNER_TEMP\bastion_key.pem"
           icacls $key /inheritance:r
@@ -34,30 +36,25 @@ jobs:
           icacls $key /grant:r "*S-1-5-20:(R)"
           icacls $key
 
-          Start-Process ssh -ArgumentList "-i", $key, "-o", "StrictHostKeyChecking=no", "-L", "5433:${{ secrets.TRIAL_DB_HOST }}:5432", "ec2-user@${{ secrets.BASTION_IP }}", "-N", "-v" `
+          $sshProc = Start-Process ssh -ArgumentList "-i", $key, "-o", "StrictHostKeyChecking=no", "-L", "5433:${{ secrets.TRIAL_DB_HOST }}:5432", "ec2-user@${{ secrets.BASTION_IP }}", "-N", "-v" `
             -RedirectStandardOutput "$env:RUNNER_TEMP\ssh_out.log" `
             -RedirectStandardError "$env:RUNNER_TEMP\ssh_err.log" `
-            -WindowStyle Hidden
+            -WindowStyle Hidden -PassThru
 
           Start-Sleep -Seconds 10
-
-          Write-Host "----- SSH stdout -----"
-          Get-Content "$env:RUNNER_TEMP\ssh_out.log" -ErrorAction SilentlyContinue
-          Write-Host "----- SSH stderr -----"
-          Get-Content "$env:RUNNER_TEMP\ssh_err.log" -ErrorAction SilentlyContinue
 
           Write-Host "----- Checking if port 5433 is listening -----"
           Test-NetConnection -ComputerName localhost -Port 5433
 
-      - name: Run SQL file against trial database
-        shell: powershell
-        env:
-          PGPASSWORD: ${{ secrets.TRIAL_DB_PASSWORD }}
-        run: |
+          Write-Host "----- Running SQL file -----"
           & "C:\Program Files\PostgreSQL\18\bin\psql.exe" -h localhost -p 5433 -U ${{ secrets.TRIAL_DB_USER }} -d ${{ secrets.TRIAL_DB_NAME }} -f sql/changes.sql
+          $psqlExitCode = $LASTEXITCODE
 
-      - name: Close SSH tunnel
-        shell: powershell
-        if: always()
-        run: |
-          Get-Process ssh -ErrorAction SilentlyContinue | Stop-Process -Force
+          Write-Host "----- Closing SSH tunnel -----"
+          Stop-Process -Id $sshProc.Id -Force -ErrorAction SilentlyContinue
+
+          if ($psqlExitCode -ne 0) {
+            Write-Host "----- SSH stderr (for debugging) -----"
+            Get-Content "$env:RUNNER_TEMP\ssh_err.log" -ErrorAction SilentlyContinue
+            exit $psqlExitCode
+          }
