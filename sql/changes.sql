@@ -133,7 +133,7 @@ CREATE TABLE focus.aws_focus_cost_data (
 
 
 ALTER TABLE focus.aws_focus_cost_data OWNER TO postgres;
-
+ALTER TABLE focus.aws_focus_cost_data ADD COLUMN IF NOT EXISTS position VARCHAR(50);
 
 
 
@@ -7489,3 +7489,4 @@ $function$
 --againForCheckingghg
 --Data_001
 --NewFields
+--done
